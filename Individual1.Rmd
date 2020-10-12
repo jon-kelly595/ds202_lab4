@@ -1,0 +1,105 @@
+---
+title: "Individual1"
+author: "Jonathan Kelly"
+date: "10/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(tidyverse)
+library(dbplyr)
+defense <- read_excel('cyclonesFootball2019.xlsx', sheet='Defensive')
+offense <- read_excel('cyclonesFootball2019.xlsx', sheet='Offensive')
+biography <- read_excel('cyclonesFootball2019.xlsx', sheet='Biography')
+```
+
+## Part 1 : Cleaning data
+
+```{r}
+defClean <- defense
+defClean$Name <- as.factor(defClean$Name)
+defClean$Opponent_Opponent <- as.factor(defClean$Opponent_Opponent)
+defClean <- defClean %>% mutate_at(c(3:11), as.numeric) %>% rename(Opponent = Opponent_Opponent) 
+str(defClean)
+
+offClean <- offense
+offClean$Name <- as.factor(offClean$Name)
+offClean$Opponent_Opponent <- as.factor(offClean$Opponent_Opponent)
+offClean <- offClean %>% mutate_at(c(3:12), as.numeric) %>% rename(Opponent = Opponent_Opponent) 
+str(offClean)
+
+bioClean <- biography
+bioClean$Name <- as.factor(bioClean$Name)
+bioClean <- bioClean %>% separate(Height, c('feet','inches')) %>% mutate_at(c(3:4), as.numeric)
+bioClean$Height <- (bioClean$feet * 12) + bioClean$inches
+bioClean <- bioClean[, -c(3:4)]
+bioClean
+str(bioClean)
+```
+
+## Part 2: Tidying
+
+```{r}
+defClean <- defClean %>% pivot_longer(Tackles_Solo:Pass_PB, names_to  = "stat")
+defClean
+```
+
+```{r}
+ggplot(defClean, aes(x = value))  + geom_bar(stat = "count")  + facet_wrap(~stat) + xlab('Number of Points') + ylab('Frequency of Points')  + ggtitle('Distributions of Defensive Statistics')
+```
+  
+  2. Looking at these charts we can see that the rarest stats are 'Tackles_Sack' and the 4 turnover stats.
+  
+```{r}
+defClean %>% filter((Opponent == 'Notre Dame' | Opponent == 'Iowa') & stat == 'Tackles_Solo') %>% pivot_wider(names_from = 'Opponent', values_from = 'value') %>% select(Name, 'Iowa', 'Notre Dame') %>% ggplot(aes(`Iowa`, `Notre Dame`)) + geom_jitter() + ggtitle('Solo Tackles Aginst Iowa and Notre Dame')
+```
+
+  3. comparing solo tackles against both teams our defense performed better against Notre Dame. Even though we had one player who managed 7 tackles against Iowa our teams as a whole appears to have more solo tackles against Iowa.
+
+```{r}
+bioClean <- bioClean %>% separate(Hometown, c("City", "State"), sep = ", ")
+head(bioClean)
+```
+
+```{r}
+table(bioClean$State)
+```
+  5. We get most of our players from Iowa, which would make sense, but we also have a surprisingly high amount of players form Florida at 10 players and one player from Australia. 
+
+## Part 3: Joining dataframes
+
+```{r}
+defStates <- defClean %>% select(Name) %>% distinct()
+defStates <- defStates %>% left_join(bioClean, by = "Name")
+
+offStates <- offClean %>% select(Name) %>% distinct()
+offStates <-  offStates %>% left_join(bioClean, by = "Name")
+
+table(defStates$State)
+table(offStates$State)
+```
+
+```{r}
+ggplot(defStates, aes(State)) + geom_bar() + xlab('Home State') + ylab('Amount of Players') + ggtitle('Home States for Defensive Players')
+ggplot(offStates, aes(State)) + geom_bar() + xlab('Home State') + ylab('Amount of Players') + ggtitle('Home States for Offensive Players')
+```
+
+Joining the Names of our defensive and offensive players to the biography dataset, we can see where each of our defensive and offensive players come from. 
+A large majority are not marked in the biography dataset and so they are NA. But out of the ones that do exist, Iowa is fairly high in the defense but only one player in the offense. 
+Florida and Okalahoma are both fairly high in both the defense and offense.
+
+```{r}
+offScore <- offClean %>% replace(is.na(.),0) %>% mutate(offensivePerformance = Rushing_ATT + Rushing_YDS + Rushing_TD + Receiving_REC + Receiving_YDS + Receiving_TD + Passing_YDS + Passing_TD + Passing_INT) %>% select(Name, offensivePerformance) %>% group_by(Name) %>% summarise(offensivePerformance = sum(offensivePerformance))
+
+offScore
+
+ggplot(offScore, aes(x = offensivePerformance, y = Name)) + geom_bar(stat = "identity", width = 0.3)
+```
+
+Looking at the sum of offensive stats Brock Purdy out performs the rest of our team with a very high total of 4368.
+
+```{r}
+
+```
