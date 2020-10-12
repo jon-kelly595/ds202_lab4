@@ -101,5 +101,41 @@ ggplot(offScore, aes(x = offensivePerformance, y = Name)) + geom_bar(stat = "ide
 Looking at the sum of offensive stats Brock Purdy out performs the rest of our team with a very high total of 4368.
 
 ```{r}
+defense2018 <- read_excel('./cyclonesFootball2018.xlsx', sheet='Defensive')
+offense2018 <- read_excel('./cyclonesFootball2018.xlsx', sheet='Offensive')
 
+def2018Clean <- defense2018
+def2018Clean$Name <- as.factor(def2018Clean$Name)
+def2018Clean$Opponent_Opponent <- as.factor(def2018Clean$Opponent_Opponent)
+def2018Clean <- def2018Clean %>% mutate_at(c(3:11), as.numeric) %>% rename(Opponent = Opponent_Opponent) 
+
+defenseScore2018 <- def2018Clean %>% replace(is.na(.),0) %>% mutate(defensivePerformance = Tackles_Solo + Tackles_ASST + Tackles_TFL + Tackles_Sack + Turnover_FF + Turnover_FR + Turnover_INT + Pass_QBH + Pass_PB) %>% select(Name, defensivePerformance) %>% group_by(Name) %>% summarise(defensivePerformance = sum(defensivePerformance))
+
+off2018Clean <- offense2018
+off2018Clean$Name <- as.factor(off2018Clean$Name)
+off2018Clean$Opponent_Opponent <- as.factor(off2018Clean$Opponent_Opponent)
+off2018Clean <- off2018Clean %>% mutate_at(c(3:12), as.numeric) %>% rename(Opponent = Opponent_Opponent)
+
+offensiveScore2018 <- off2018Clean %>% replace(is.na(.),0) %>% mutate(offensivePerformance = Rushing_ATT + Rushing_YDS + Rushing_TD + Receiving_REC + Receiving_YDS + Receiving_TD + Passing_YDS + Passing_TD + Passing_INT) %>% select(Name, offensivePerformance) %>% group_by(Name) %>% summarise(offensivePerformance = sum(offensivePerformance))
+
+scores18 <- full_join(offensiveScore2018, defenseScore2018, by = "Name")
+scores18 <- scores18 %>% replace(is.na(.),0) %>% mutate(score18 = offensivePerformance + defensivePerformance)
+
+defClean <- defense
+defClean$Name <- as.factor(defClean$Name)
+defClean$Opponent_Opponent <- as.factor(defClean$Opponent_Opponent)
+defClean <- defClean %>% mutate_at(c(3:11), as.numeric) %>% rename(Opponent = Opponent_Opponent) 
+
+defenseScore2019 <- defClean %>% replace(is.na(.),0) %>% mutate(defensivePerformance = Tackles_Solo + Tackles_ASST + Tackles_TFL + Tackles_Sack + Turnover_FF + Turnover_FR + Turnover_INT + Pass_QBH + Pass_PB) %>% select(Name, defensivePerformance) %>% group_by(Name) %>% summarise(defensivePerformance = sum(defensivePerformance))
+
+scores19 <- full_join(offScore, defenseScore2019, by = "Name")
+scores19 <- scores19 %>% replace(is.na(.),0) %>% mutate(score19 = offensivePerformance + defensivePerformance)
+
+scores19 <- scores19 %>% select(Name, score19)
+scores18 <- scores18 %>% select(Name, score18)
+scores <- full_join(scores18, scores19, by = "Name")
+
+scores
 ```
+
+this shows what their total score from all defensive and offensive stats were from both 2018 and 2019. Using this we can see which players improved and which ones did not.
